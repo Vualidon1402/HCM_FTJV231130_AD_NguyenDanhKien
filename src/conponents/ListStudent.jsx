@@ -4,13 +4,16 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { studentActions } from "../store/slices/ListStudent.slice";
 
+// const randomID = () => {
+//   return Math.floor(Math.random() * 100000);
+// };
+
 const ListStudent = () => {
-  const [showForm, setShowForm] = useState(false);
-  
   const dispatch = useDispatch();
-  const students = useSelector((store) => store.students);
-  console.log(students);
-  const [newStudent, setNewStudent] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const studentList = useSelector((store) => store.studentReducer);
+  console.log("studentList", studentList);
+
   const handleShowForm = () => {
     setShowForm(true);
   };
@@ -18,66 +21,99 @@ const ListStudent = () => {
     setShowForm(false);
   };
 
-  // const handleUserNameChange = (e) => {
-  //   setUserName(e.target.value);
-  // };
-  // const validateUserName = () => {
-  //   if (userName.trim() === "") {
-  //     setUserNameError("Họ và tên không được để trống.");
-  //   } else {
-  //     setUserNameError("");
-  //   }
-  // };
+  const [userName, setUserName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [error, setError] = useState({});
 
-  // const handleDateOfBirthChange = (e) => {
-  //   setDateOfBirth(e.target.value);
-  // };
-  // const validateDateOfBirth = () => {
-  //   if (dateOfBirth.trim() === "") {
-  //     setDateOfBirthError("Ngày sinh không được lớn hơn hiện tại.");
-  //   } else {
-  //     setDateOfBirthError("");
-  //   }
-  // };
+  const validate = () => {
+    let newError = {};
+    if (!userName) {
+      newError.userName = "Họ và tên không được để trống";
+    }
+    if (!dateOfBirth) {
+      newError.dateOfBirth = "Ngày sinh không được để trống";
+    } else {
+      const birthDate = new Date(dateOfBirth);
+      const currentDate = new Date();
+      birthDate.setHours(0, 0, 0, 0);
+      currentDate.setHours(0, 0, 0, 0);
 
-  // const handleEmailChange = (e) => {
-  //   setEmail(e.target.value);
-  // };
-  // const validateEmail = () => {
-  //   if (email.trim() === "") {
-  //     setEmailError("Email không được để trống.");
-  //   } else {
-  //     setEmailError("");
-  //   }
-  // };
+      if (birthDate > currentDate) {
+        newError.dateOfBirth = "Ngày sinh không được vượt quá hiện tại";
+      }
+    }
+    if (!email) {
+      newError.email = "Email không hợp lệ";
+    }
+    setError(newError);
+    return Object.keys(newError).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let newStudent = {
-      id: students.length + 1,
-      name: e.target.name.value,
-state: "đang hoạt động",
+    if (validate()) {
+      try {
+        let res = await axios.post(`http://localhost:3000/students`, {
+          // id: randomID(),
+          name: userName,
+          date_of_birth: dateOfBirth,
+          email: email,
+          address: address,
+        });
+        console.log(res);
+        setShowForm(false);
+        dispatch(studentActions.findAll());
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    setUserName("");
+    setDateOfBirth("");
+    setEmail("");
+    setAddress("");
+  };
 
-      setShowForm(false);
-    
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:3000/students/${id}`);
+      console.log("delete", id);
+      dispatch(studentActions.findAll(id));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const [editingStudent, setEditingStudent] = useState(null);
+
+  const handleEdit = async (id) => {
+    try {
+      const student = studentList.data.find((student) => student.id === id);
+      setEditingStudent(student);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const [searchValue, setSearchValue] = useState("");
+
+  const handleSearchChange = async (event) => {
+    setSearchValue(event.target.value);
+
+    if (event.target.value !== "") {
+      try {
+        const response = await axios.get(
+          `http://localhost:3000/students?email=${product.email}`
+        );
+        setStudentList(response.data);
+      } catch (error) {
+        console.log(error);
+      }
     }
   };
 
   return (
     <>
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-        crossOrigin="anonymous"
-        referrerPolicy="no-referrer"
-      />
-      <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
-        crossOrigin="anonymous"
-      />
       <div className="w-[80%] m-auto mt-4 h-[100vh]">
         <main className="main">
           <header className="d-flex justify-content-between mb-3">
@@ -92,6 +128,8 @@ state: "đang hoạt động",
               type="text"
               className="form-control"
               placeholder="Tìm kiếm theo email"
+              value={searchValue}
+              onChange={handleSearchChange}
             />
             <i className="fa-solid fa-arrows-rotate" title="Refresh"></i>
           </div>
@@ -109,146 +147,60 @@ state: "đang hoạt động",
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>1</td>
-                <td>Nguyễn Văn A</td>
-                <td>28/02/1990</td>
-                <td>nvana@gmail.com</td>
-                <td>Ba Đình, Hà Nội</td>
-                <td>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <div className="status status-active"></div>
-                    <span> Đang hoạt động</span>
-                  </div>
-                </td>
-                <td>
-                  <span className="button button-block">Chặn</span>
-                </td>
-                <td>
-                  <span className="button button-edit">Sửa</span>
-                </td>
-                <td>
-                  <span className="button button-delete">Xóa</span>
-                </td>
-              </tr>
-              <tr>
-                <td>2</td>
-                <td>Trần Thị B</td>
-                <td>15/07/1985</td>
-                <td>ttb@gmail.com</td>
-                <td>Cầu Giấy, Hà Nội</td>
-                <td>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <div className="status status-stop"></div>
-                    <span> Ngừng hoạt động</span>
-                  </div>
-                </td>
-                <td>
-                  <span className="button button-block">Bỏ chặn</span>
-                </td>
-                <td>
-                  <span className="button button-edit">Sửa</span>
-                </td>
-                <td>
-                  <span className="button button-delete">Xóa</span>
-                </td>
-              </tr>
-              <tr>
-                <td>3</td>
-                <td>Lê Văn C</td>
-                <td>03/10/2000</td>
-                <td>lvc@gmail.com</td>
-                <td>Hai Bà Trưng, Hà Nội</td>
-                <td>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <div className="status status-stop"></div>
-                    <span> Ngừng hoạt động</span>
-                  </div>
-                </td>
-                <td>
-                  <span className="button button-block">Bỏ chặn</span>
-                </td>
-                <td>
-                  <span className="button button-edit">Sửa</span>
-                </td>
-                <td>
-                  <span className="button button-delete">Xóa</span>
-                </td>
-              </tr>
-              <tr>
-                <td>4</td>
-                <td>Phạm Thị D</td>
-                <td>20/05/1995</td>
-                <td>ptd@gmail.com</td>
-                <td>Hoàn Kiếm, Hà Nội</td>
-                <td>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <div className="status status-active"></div>
-                    <span> Đang hoạt động</span>
-                  </div>
-                </td>
-                <td>
-                  <span className="button button-block">Chặn</span>
-                </td>
-                <td>
-                  <span className="button button-edit">Sửa</span>
-                </td>
-                <td>
-                  <span className="button button-delete">Xóa</span>
-                </td>
-              </tr>
-              <tr>
-                <td>5</td>
-                <td>Ngô Văn E</td>
-                <td>12/11/1988</td>
-                <td>nve@gmail.com</td>
-                <td>Cầu Giấy, Hà Nội</td>
-                <td>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <div className="status status-active"></div>
-                    <span> Đang hoạt động</span>
-                  </div>
-                </td>
-                <td>
-                  <span className="button button-block">Chặn</span>
-                </td>
-                <td>
-                  <span className="button button-edit">Sửa</span>
-                </td>
-                <td>
-                  <span className="button button-delete">Xóa</span>
-                </td>
-              </tr>
+              {studentList.data?.map((student, index) => {
+                const isEditing =
+                  editingStudent && editingStudent.id === student.id;
+                return (
+                  <tr key={index}>
+                    <td>{index + 1}</td>
+                    <td>{isEditing ? editingStudent.name : student.name}</td>
+                    <td>
+                      {isEditing
+                        ? editingStudent.date_of_birth
+                        : student.date_of_birth}
+                    </td>
+                    <td>{isEditing ? editingStudent.email : student.email}</td>
+                    <td>
+                      {isEditing ? editingStudent.address : student.address}
+                    </td>
+                    <td>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <div className="status status-active"></div>
+                        <span> Đang hoạt động</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="button button-block">Chặn</span>
+                    </td>
+                    <td>
+                      <span
+                        onClick={() => {
+                          handleEdit(student.id);
+                        }}
+                        className="button button-edit"
+                      >
+                        Sửa
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        onClick={() => {
+                          handleDelete(student.id);
+                        }}
+                        className="button button-delete"
+                      >
+                        Xóa
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           <footer className="d-flex justify-content-end align-items-center gap-3">
@@ -290,10 +242,10 @@ state: "đang hoạt động",
       </div>
       {showForm && (
         <div className="overlay">
-          <form className="form">
+          <form onSubmit={handleSubmit} className="form">
             <div className="d-flex justify-content-between align-items-center">
               <h4>Chỉnh sửa nhân viên</h4>
-              <i className="fa-solid fa-xmark" onClick={handleCloseForm}></i>
+              <i onClick={handleCloseForm} className="fa-solid fa-xmark"></i>
             </div>
             <div>
               <label className="form-label" htmlFor="userName">
@@ -304,13 +256,10 @@ state: "đang hoạt động",
                 type="text"
                 className="form-control"
                 value={userName}
-                onChange={handleUserNameChange}
-                onBlur={validateUserName}
+                onChange={(e) => setUserName(e.target.value)}
               />
               <div className="form-text error">
-                {userNameError && (
-                  <div className="form-text error">{userNameError}</div>
-                )}
+                {error.userName && <div>{error.userName}</div>}
               </div>
             </div>
             <div>
@@ -322,14 +271,11 @@ state: "đang hoạt động",
                 type="date"
                 className="form-control"
                 value={dateOfBirth}
-                onChange={handleDateOfBirthChange}
-                onBlur={validateDateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
               />
             </div>
             <div className="form-text error">
-              {dateOfBirthError && (
-                <div className="form-text error">{dateOfBirthError}</div>
-              )}
+              {error.dateOfBirth && <div>{error.dateOfBirth}</div>}
             </div>
             <div>
               <label className="form-label" htmlFor="email">
@@ -337,17 +283,14 @@ state: "đang hoạt động",
               </label>
               <input
                 id="email"
-                type="text"
+                type="email"
                 className="form-control"
                 value={email}
-                onChange={handleEmailChange}
-                onBlur={validateEmail}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="form-text error">
-              {emailError && (
-                <div className="form-text error">{emailError}</div>
-              )}
+              {error.email && <div>{error.email}</div>}
             </div>
             <div>
               <label className="form-label" htmlFor="address">
@@ -357,10 +300,12 @@ state: "đang hoạt động",
                 className="form-control"
                 id="address"
                 rows="3"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
               ></textarea>
             </div>
             <div>
-              <button className="w-100 btn btn-primary" onSubmit={handleSubmit}>
+              <button className="w-100 btn btn-primary" type="submit">
                 Thêm mới
               </button>
             </div>

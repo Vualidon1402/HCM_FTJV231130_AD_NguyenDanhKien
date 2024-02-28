@@ -1,10 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
-import { studentReducer } from "./slices/ListStudent.slice";
-
-const Store = configureStore({
+import { studentReducer, studentActions } from "./slices/ListStudent.slice";
+export const store = configureStore({
   reducer: {
-    students: studentReducer,
+    studentReducer: studentReducer,
   },
 });
 
-export default Store;
+store.dispatch(studentActions.findAll());
